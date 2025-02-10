@@ -120,6 +120,7 @@ class Engine:
         top_logprobs_num: Optional[Union[List[int], int]] = None,
         lora_path: Optional[List[Optional[str]]] = None,
         custom_logit_processor: Optional[Union[List[str], str]] = None,
+        return_hidden_states: Optional[bool] = False,
         stream: bool = False,
     ) -> Union[Dict, Iterator[Dict]]:
         """
@@ -136,6 +137,7 @@ class Engine:
             lora_path=lora_path,
             custom_logit_processor=custom_logit_processor,
             stream=stream,
+            return_hidden_states=return_hidden_states,
         )
         loop = asyncio.get_event_loop()
         generator = self.tokenizer_manager.generate_request(obj, None)

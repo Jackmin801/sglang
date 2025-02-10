@@ -234,6 +234,7 @@ class Req:
         session_id: Optional[str] = None,
         custom_logit_processor: Optional[str] = None,
         eos_token_ids: Optional[Set[int]] = None,
+        return_hidden_states: bool = False,
     ):
         # Input and output info
         self.rid = rid
@@ -315,6 +316,7 @@ class Req:
             self.output_token_logprobs_val = self.output_token_logprobs_idx = (
                 self.output_top_logprobs_val
             ) = self.output_top_logprobs_idx = None
+        self.return_hidden_states = return_hidden_states
         self.hidden_states = []
 
         # Logprobs (internal values)
@@ -619,7 +621,6 @@ class ScheduleBatch:
         enable_overlap: bool,
         spec_algorithm: SpeculativeAlgorithm,
         enable_custom_logit_processor: bool,
-        return_hidden_states: bool = False,
     ):
         return cls(
             reqs=reqs,
@@ -634,7 +635,7 @@ class ScheduleBatch:
             device=req_to_token_pool.device,
             spec_algorithm=spec_algorithm,
             enable_custom_logit_processor=enable_custom_logit_processor,
-            return_hidden_states=return_hidden_states,
+            return_hidden_states=any(req.return_hidden_states for req in reqs),
         )
 
     def batch_size(self):

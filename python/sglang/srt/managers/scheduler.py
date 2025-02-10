@@ -623,6 +623,7 @@ class Scheduler:
                 input_embeds=recv_req.input_embeds,
                 custom_logit_processor=custom_logit_processor,
                 eos_token_ids=self.model_config.hf_eos_token_id,
+                return_hidden_states=recv_req.return_hidden_states,
             )
             req.tokenizer = self.tokenizer
 
@@ -997,7 +998,6 @@ class Scheduler:
             self.enable_overlap,
             self.spec_algorithm,
             self.server_args.enable_custom_logit_processor,
-            self.server_args.return_hidden_states,
         )
         new_batch.prepare_for_extend()
 
@@ -1576,7 +1576,6 @@ class Scheduler:
             self.enable_overlap,
             self.spec_algorithm,
             self.server_args.enable_custom_logit_processor,
-            self.server_args.return_hidden_states,
         )
         idle_batch.prepare_for_idle()
         return idle_batch

@@ -74,6 +74,9 @@ class GenerateReqInput:
     # Use the processor's `to_str()` method to generate the serialized string.
     custom_logit_processor: Optional[Union[List[Optional[str]], str]] = None
 
+    # Whether to return hidden states
+    return_hidden_states: bool = False
+
     def normalize_batch_and_arguments(self):
         if (
             self.text is None and self.input_ids is None and self.input_embeds is None
@@ -218,6 +221,7 @@ class GenerateReqInput:
                 if self.custom_logit_processor is not None
                 else None
             ),
+            return_hidden_states=self.return_hidden_states,
         )
 
 
@@ -254,6 +258,8 @@ class TokenizedGenerateReqInput:
     # of `CustomLogitProcessor` in python/sglang/srt/sampling/custom_logit_processor.py
     # Use the processor's `to_str()` method to generate the serialized string.
     custom_logit_processor: Optional[str] = None
+
+    return_hidden_states: bool = False
 
 
 @dataclass
