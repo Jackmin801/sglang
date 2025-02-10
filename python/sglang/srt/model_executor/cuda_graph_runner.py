@@ -229,7 +229,7 @@ class CudaGraphRunner:
         # Capture
         try:
             with self.model_capture_mode():
-                self.capture()
+                self.capture(capture_hidden_mode=CaptureHiddenMode.NULL)
         except RuntimeError as e:
             raise Exception(
                 f"Capture cuda graph failed: {e}\n"
@@ -277,7 +277,7 @@ class CudaGraphRunner:
         )
         return is_bs_supported and is_encoder_lens_supported
 
-    def capture(self):
+    def capture(self, capture_hidden_mode: CaptureHiddenMode):
         with graph_capture() as graph_capture_context:
             self.stream = graph_capture_context.stream
             capture_range = (
@@ -286,6 +286,8 @@ class CudaGraphRunner:
                 else self.capture_bs
             )
             for bs in capture_range:
+                if bs not in self.graphs:
+                    self.graphs[bs] = {}
                 with patch_model(
                     self.model_runner.model,
                     bs in self.compile_bs,
@@ -295,14 +297,16 @@ class CudaGraphRunner:
                     (
                         graph,
                         output_buffers,
-                    ) = self.capture_one_batch_size(bs, forward)
-                    self.graphs[bs] = graph
+                    ) = self.capture_one_batch_size(bs, forward, capture_hidden_mode)
+                    self.graphs[bs][capture_hidden_mode] = graph
                     self.output_buffers[bs] = output_buffers
 
                 # Save gemlite cache after each capture
                 save_gemlite_cache()
 
-    def capture_one_batch_size(self, bs: int, forward: Callable):
+    def capture_one_batch_size(
+        self, bs: int, forward: Callable, capture_hidden_mode: CaptureHiddenMode
+    ):
         graph = torch.cuda.CUDAGraph()
         stream = self.stream
         num_tokens = bs * self.num_tokens_per_bs
@@ -347,15 +351,7 @@ class CudaGraphRunner:
             mrope_positions=mrope_positions,
             spec_algorithm=self.model_runner.spec_algorithm,
             spec_info=spec_info,
-            capture_hidden_mode=(
-                CaptureHiddenMode.FULL
-                if self.model_runner.server_args.return_hidden_states
-                else (
-                    spec_info.capture_hidden_mode
-                    if spec_info
-                    else CaptureHiddenMode.NULL
-                )
-            ),
+            capture_hidden_mode=capture_hidden_mode,
         )
 
         # Attention backend
@@ -440,7 +436,10 @@ class CudaGraphRunner:
         )
 
         # Replay
-        self.graphs[bs].replay()
+        if forward_batch.capture_hidden_mode not in self.graphs[bs]:
+            with self.model_capture_mode():
+                self.capture(capture_hidden_mode=forward_batch.capture_hidden_mode)
+        self.graphs[bs][forward_batch.capture_hidden_mode].replay()
         next_token_logits, hidden_states = self.output_buffers[bs]
 
         logits_output = LogitsProcessorOutput(
